@@ -115,6 +115,10 @@ spec:
               value: admin
             - name: ME_CONFIG_MONGODB_ADMINPASSWORD
               value: admin123
+            - name: ME_CONFIG_BASICAUTH_USERNAME
+              value: admin
+            - name: ME_CONFIG_BASICAUTH_PASSWORD
+              value: admin123
 ---
 # Mongo Express Service (NodePort)
 apiVersion: v1
