@@ -1,10 +1,32 @@
-# Namespace (optionnel)
+# Namespace
 apiVersion: v1
 kind: Namespace
 metadata:
   name: mongo-app
 ---
-# Persistent Volume Claim pour MongoDB
+# StorageClass local
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+---
+# Persistent Volume
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongodb-pv
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-storage
+  hostPath:
+    path: /mnt/data/mongodb
+---
+# Persistent Volume Claim
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -16,6 +38,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
+  storageClassName: local-storage
 ---
 # MongoDB Deployment
 apiVersion: apps/v1
@@ -51,7 +74,7 @@ spec:
           persistentVolumeClaim:
             claimName: mongodb-pvc
 ---
-# MongoDB Service (ClusterIP)
+# MongoDB Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -107,24 +130,3 @@ spec:
     - port: 8081
       targetPort: 8081
       nodePort: 30081
----
-# (Optionnel) Ingress Mongo Express
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: mongo-express-ingress
-  namespace: mongo-app
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-spec:
-  rules:
-    - host: mongo.neotech-consulting.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: mongo-express-service
-                port:
-                  number: 8081
