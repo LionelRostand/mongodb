@@ -1,32 +1,39 @@
-# Namespace
 apiVersion: v1
 kind: Namespace
 metadata:
   name: mongo-app
+
 ---
-# StorageClass local
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: local-storage
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
+
 ---
-# Persistent Volume
 apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: mongodb-pv
 spec:
   capacity:
-    storage: 1Gi
+    storage: 5Gi
   accessModes:
     - ReadWriteOnce
   storageClassName: local-storage
-  hostPath:
+  local:
     path: /mnt/data/mongodb
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - <NODE_NAME>   # Remplace par le nom de ton noeud
+
 ---
-# Persistent Volume Claim
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -35,12 +42,12 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: local-storage
   resources:
     requests:
-      storage: 1Gi
-  storageClassName: local-storage
+      storage: 5Gi
+
 ---
-# MongoDB Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -58,7 +65,7 @@ spec:
     spec:
       containers:
         - name: mongodb
-          image: mongo:6
+          image: mongo:6.0
           ports:
             - containerPort: 27017
           env:
@@ -67,14 +74,14 @@ spec:
             - name: MONGO_INITDB_ROOT_PASSWORD
               value: admin123
           volumeMounts:
-            - name: mongodb-storage
+            - name: mongo-data
               mountPath: /data/db
       volumes:
-        - name: mongodb-storage
+        - name: mongo-data
           persistentVolumeClaim:
             claimName: mongodb-pvc
+
 ---
-# MongoDB Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -84,8 +91,10 @@ spec:
   selector:
     app: mongodb
   ports:
-    - port: 27017
+    - protocol: TCP
+      port: 27017
       targetPort: 27017
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -105,49 +114,33 @@ spec:
       containers:
         - name: mongo-express
           image: mongo-express:latest
+          ports:
+            - containerPort: 8081
           env:
             - name: ME_CONFIG_MONGODB_SERVER
-              value: "mongodb-service.mongo-app.svc.cluster.local"
+              value: mongodb-service.mongo-app.svc.cluster.local
             - name: ME_CONFIG_MONGODB_ADMINUSERNAME
-              value: "admin"
+              value: admin
             - name: ME_CONFIG_MONGODB_ADMINPASSWORD
-              value: "admin123"
+              value: admin123
+            - name: ME_CONFIG_MONGODB_AUTH_DATABASE
+              value: admin
+            - name: ME_CONFIG_BASICAUTH_USERNAME
+              value: admin
+            - name: ME_CONFIG_BASICAUTH_PASSWORD
+              value: admin123
 
 ---
-# Mongo Express Service (NodePort)
 apiVersion: v1
 kind: Service
 metadata:
   name: mongo-express-service
   namespace: mongo-app
 spec:
-  type: NodePort
   selector:
     app: mongo-express
   ports:
-    - port: 8081
+    - protocol: TCP
+      port: 8081
       targetPort: 8081
-      nodePort: 30081
-      ---
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: mongo-init-user
-  namespace: mongo-app
-spec:
-  template:
-    spec:
-      containers:
-      - name: mongo
-        image: mongo
-        command:
-          - mongo
-          - mongodb-service.mongo-app.svc.cluster.local/admin
-          - --eval
-          - |
-            db.createUser({
-              user: "admin",
-              pwd: "admin123",
-              roles: [{ role: "root", db: "admin" }]
-            })
-      restartPolicy: OnFailure
+  type: ClusterIP
