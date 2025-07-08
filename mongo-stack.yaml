@@ -137,3 +137,26 @@ spec:
     - port: 8081
       targetPort: 8081
       nodePort: 30081
+      ---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mongo-init-user
+  namespace: mongo-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: mongo
+        image: mongo
+        command:
+          - mongo
+          - mongodb-service.mongo-app.svc.cluster.local/admin
+          - --eval
+          - |
+            db.createUser({
+              user: "admin",
+              pwd: "admin123",
+              roles: [{ role: "root", db: "admin" }]
+            })
+      restartPolicy: OnFailure
