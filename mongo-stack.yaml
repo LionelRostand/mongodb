@@ -87,7 +87,6 @@ spec:
     - port: 27017
       targetPort: 27017
 ---
-# Mongo Express Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -110,7 +109,7 @@ spec:
             - containerPort: 8081
           env:
             - name: ME_CONFIG_MONGODB_SERVER
-              value: mongodb-service
+              value: mongodb-service.mongo-app.svc.cluster.local
             - name: ME_CONFIG_MONGODB_ADMINUSERNAME
               value: admin
             - name: ME_CONFIG_MONGODB_ADMINPASSWORD
@@ -119,6 +118,9 @@ spec:
               value: admin
             - name: ME_CONFIG_BASICAUTH_PASSWORD
               value: admin123
+            - name: ME_CONFIG_MONGODB_URL
+              value: "mongodb://admin:admin123@mongodb-service.mongo-app.svc.cluster.local:27017/"
+
 ---
 # Mongo Express Service (NodePort)
 apiVersion: v1
