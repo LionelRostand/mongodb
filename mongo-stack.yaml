@@ -1,8 +1,8 @@
+---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: mongo-app
-
 ---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -10,7 +10,6 @@ metadata:
   name: local-storage
 provisioner: kubernetes.io/no-provisioner
 volumeBindingMode: WaitForFirstConsumer
-
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -31,8 +30,7 @@ spec:
             - key: kubernetes.io/hostname
               operator: In
               values:
-                - vmi2656708.contaboserver.net   # Remplace par le nom de ton noeud
-
+                - vmi2656707.contaboserver.net  # <- Change ici si besoin
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -46,7 +44,19 @@ spec:
   resources:
     requests:
       storage: 5Gi
-
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-init-script
+  namespace: mongo-app
+data:
+  init.js: |
+    db.createUser({
+      user: 'admin',
+      pwd: 'admin123',
+      roles: [{ role: 'root', db: 'admin' }]
+    });
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -54,7 +64,6 @@ metadata:
   name: mongodb
   namespace: mongo-app
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: mongodb
@@ -65,22 +74,21 @@ spec:
     spec:
       containers:
         - name: mongodb
-          image: mongo:6.0
+          image: mongo:7
           ports:
             - containerPort: 27017
-          env:
-            - name: MONGO_INITDB_ROOT_USERNAME
-              value: admin
-            - name: MONGO_INITDB_ROOT_PASSWORD
-              value: admin123
           volumeMounts:
             - name: mongo-data
               mountPath: /data/db
+            - name: init-script
+              mountPath: /docker-entrypoint-initdb.d
       volumes:
         - name: mongo-data
           persistentVolumeClaim:
             claimName: mongodb-pvc
-
+        - name: init-script
+          configMap:
+            name: mongo-init-script
 ---
 apiVersion: v1
 kind: Service
@@ -94,7 +102,6 @@ spec:
     - protocol: TCP
       port: 27017
       targetPort: 27017
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -129,12 +136,11 @@ spec:
               value: admin
             - name: ME_CONFIG_BASICAUTH_PASSWORD
               value: admin123
-
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: mongo-express-service
+  name: mongo-express
   namespace: mongo-app
 spec:
   selector:
@@ -143,4 +149,4 @@ spec:
     - protocol: TCP
       port: 8081
       targetPort: 8081
-  type: ClusterIP
+  type: NodePort
