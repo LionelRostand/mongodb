@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mongo-create-admin
+  namespace: mongo-app
+spec:
+  template:
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:6
+        command: ["mongo"]
+        args:
+          - "--host"
+          - "mongodb-service.mongo-app.svc.cluster.local"
+          - "--eval"
+          - >
+            db.getSiblingDB('admin').createUser({user: 'admin', pwd: 'admin123', roles:[{role:'root', db:'admin'}]})
+      restartPolicy: Never
+  backoffLimit: 2
