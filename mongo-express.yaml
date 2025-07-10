@@ -2,41 +2,38 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mongo-express
+  name: adminmongo
   namespace: mongo-app
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app: mongo-express
+      app: adminmongo
   template:
     metadata:
       labels:
-        app: mongo-express
+        app: adminmongo
     spec:
       containers:
-        - name: mongo-express
-          image: mongo-express:1.0.2
+        - name: adminmongo
+          image: mrvautin/adminmongo
           ports:
-            - containerPort: 8081
+            - containerPort: 1234
           env:
-            - name: ME_CONFIG_MONGODB_SERVER
-              value: "mongodb-service"
-            - name: ME_CONFIG_MONGODB_ADMINUSERNAME
-              value: "admin"
-            - name: ME_CONFIG_MONGODB_ADMINPASSWORD
-              value: "admin123"
-            - name: ME_CONFIG_MONGODB_AUTH_DATABASE
-              value: "admin"
+            - name: CONN_NAME
+              value: "MongoDB"
+            - name: DB_HOST
+              value: "mongodb://admin:admin123@mongodb-service:27017/admin"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: mongo-express
+  name: adminmongo-service
   namespace: mongo-app
 spec:
   selector:
-    app: mongo-express
+    app: adminmongo
   ports:
     - protocol: TCP
-      port: 8081
-      targetPort: 8081
+      port: 80
+      targetPort: 1234
