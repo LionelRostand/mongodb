@@ -20,10 +20,8 @@ spec:
           ports:
             - containerPort: 1234
           env:
-            - name: CONN_NAME
-              value: "MongoDB"
-            - name: DB_HOST
-              value: "mongodb://admin:admin123@mongodb-service:27017/admin"
+            - name: CONNECTION_STRING
+              value: mongodb://admin:admin123@mongodb-service.mongo-app.svc.cluster.local:27017/admin
 ---
 apiVersion: v1
 kind: Service
@@ -38,5 +36,4 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 1234
-      nodePort: 30080  # facultatif : sinon, K8s en choisira un automatiquement (dans la plage 30000–32767)
-
+      nodePort: 30080  # Choisi pour un accès stable
