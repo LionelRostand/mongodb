@@ -1,30 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mongo-ui
+  name: adminmongo
   namespace: mongodb
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mongo-ui
+      app: adminmongo
   template:
     metadata:
       labels:
-        app: mongo-ui
+        app: adminmongo
     spec:
       containers:
-      - name: mongo-express
-        image: mongo-express
+      - name: adminmongo
+        image: mrvautin/adminmongo
         env:
-        - name: ME_CONFIG_MONGODB_SERVER
-          value: "mongodb"
-        - name: ME_CONFIG_MONGODB_ADMINUSERNAME
-          value: "adminuser"
-        - name: ME_CONFIG_MONGODB_ADMINPASSWORD
-          value: "adminpass"
+        - name: CONNECTIONS
+          value: '[{"name":"Local","connection_string":"mongodb://adminuser:adminpass@mongodb:27017"}]'
         ports:
-        - containerPort: 8081
+        - containerPort: 1234
       - name: nginx
         image: nginx:stable
         ports:
@@ -37,7 +33,7 @@ spec:
       volumes:
       - name: nginx-conf
         configMap:
-          name: mongo-ui-nginx
+          name: adminmongo-nginx
       - name: certs
         secret:
           secretName: mongo-tls
@@ -45,12 +41,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mongo-ui
+  name: adminmongo
   namespace: mongodb
 spec:
-  selector:
-    app: mongo-ui
   type: NodePort
+  selector:
+    app: adminmongo
   ports:
   - name: https
     port: 443
